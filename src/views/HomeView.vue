@@ -6,8 +6,16 @@ import PianoRollVue from '@/components/PianoRoll.vue';
 
 <template>
   <main>
-    <PianoRollVue style="width: 500px;" name-type="sharp" :key-width="50" :key-height="100" enable-audio />
-    <PianoGameVue />
+    <PianoRollVue
+      style="width: 100vw;"
+      name-type="sharp"
+      :key-width="50"
+      :key-height="100"
+      enable-audio
+      :range-start="{ name: 'G', octave: 3 }"
+      :range-end="{ name: 'G', octave: 7 }"
+    />
+    <!-- <PianoGameVue /> -->
     <IntervalGameVue :level="0" range-start="C2" range-end="C4"/>
   </main>
 </template>

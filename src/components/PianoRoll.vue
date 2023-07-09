@@ -12,12 +12,31 @@ const props = defineProps<{
     nameType: 'sharp' | 'flat'
     keyWidth: number
     keyHeight: number
+    rangeStart?: {
+        name: string
+        octave: number
+    }
+    rangeEnd?: {
+        name: string
+        octave: number
+    }
     enableAudio?: boolean
 }>();
 
 // Create note groups
-const naturals = notes.filter(({ sharpName }) => sharpName.length === 1);
-const nonNaturals = notes.filter((note) => !naturals.includes(note));
+const rangeStartIndex = notes.findIndex((n) => {
+    return (n.flatName === props.rangeStart.name || n.sharpName === props.rangeStart.name) &&
+        n.octave === props.rangeStart.octave;
+});
+if (rangeStartIndex === -1) throw Error(`invalid range start: ${JSON.stringify(props.rangeStart)}`)
+const rangeEndIndex = notes.findIndex((n) => {
+    return (n.flatName === props.rangeEnd.name || n.sharpName === props.rangeEnd.name) &&
+        n.octave === props.rangeEnd.octave;
+});
+if (rangeEndIndex === -1) throw Error(`invalid range end: ${JSON.stringify(props.rangeEnd)}`)
+const noteRange = notes.slice(rangeStartIndex, rangeEndIndex + 1);
+const naturals = noteRange.filter(({ sharpName }) => sharpName.length === 1);
+const nonNaturals = noteRange.filter((note) => !naturals.includes(note));
 
 // Key width
 const naturalKeyWidth = props.keyWidth;
