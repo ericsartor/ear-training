@@ -23,18 +23,29 @@ const props = defineProps<{
     enableAudio?: boolean
 }>();
 
+// Validate range notes
+if (props.rangeStart?.name.length !== 1) throw Error('rangeStart note must be a natural');
+if (props.rangeEnd?.name.length !== 1) throw Error('rangeStart note must be a natural');
+
 // Create note groups
-const rangeStartIndex = notes.findIndex((n) => {
-    return (n.flatName === props.rangeStart.name || n.sharpName === props.rangeStart.name) &&
-        n.octave === props.rangeStart.octave;
-});
-if (rangeStartIndex === -1) throw Error(`invalid range start: ${JSON.stringify(props.rangeStart)}`)
-const rangeEndIndex = notes.findIndex((n) => {
-    return (n.flatName === props.rangeEnd.name || n.sharpName === props.rangeEnd.name) &&
-        n.octave === props.rangeEnd.octave;
-});
-if (rangeEndIndex === -1) throw Error(`invalid range end: ${JSON.stringify(props.rangeEnd)}`)
-const noteRange = notes.slice(rangeStartIndex, rangeEndIndex + 1);
+const noteRange = (() => {
+    const rangeStart = props.rangeStart;
+    const rangeEnd = props.rangeEnd;
+    if (rangeStart !== undefined && rangeEnd !== undefined) {
+        const rangeStartIndex = notes.findIndex((n) => {
+            return (n.flatName === rangeStart.name || n.sharpName === rangeStart.name) &&
+                n.octave === rangeStart.octave;
+        });
+        if (rangeStartIndex === -1) throw Error(`invalid range start: ${JSON.stringify(rangeStart)}`)
+        const rangeEndIndex = notes.findIndex((n) => {
+            return (n.flatName === rangeEnd.name || n.sharpName === rangeEnd.name) &&
+                n.octave === rangeEnd.octave;
+        });
+        if (rangeEndIndex === -1) throw Error(`invalid range end: ${JSON.stringify(props.rangeEnd)}`)
+        return notes.slice(rangeStartIndex, rangeEndIndex + 1);
+    }
+    return notes;
+})();
 const naturals = noteRange.filter(({ sharpName }) => sharpName.length === 1);
 const nonNaturals = noteRange.filter((note) => !naturals.includes(note));
 
