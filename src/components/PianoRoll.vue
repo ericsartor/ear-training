@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { notes, type Note } from '@/utils/notes';
 import { ref } from 'vue';
-import { useMousePressed } from '@vueuse/core';
+import { useEventListener, useMousePressed } from '@vueuse/core';
 import { useNotePlayer } from '@/composables/useNotePlayer';
 
 const emit = defineEmits<{
@@ -21,6 +21,7 @@ const props = defineProps<{
         octave: number
     }
     enableAudio?: boolean
+    enableKeyboard?: boolean
 }>();
 
 // Validate range notes
@@ -68,16 +69,71 @@ function getNonNaturalLeft(nonNatural: Note): number {
 
 // Prepare note player
 const notePlayer = useNotePlayer();
+const activeNote = ref<Note | null>(null);
 function startNote(note: Note) {
+    activeNote.value = note;
     if (props.enableAudio === true) notePlayer.startNote(note);
     emit('note', note);
 }
 function stopNote() {
+    activeNote.value = null;
     if (props.enableAudio === true) notePlayer.stopNote();
 }
 
 // Track mouse for use on keys
 const { pressed: mousePressed } = useMousePressed();
+
+// Set up keyboard
+const whiteKeys = [
+    'z',
+    'x',
+    'c',
+    'v',
+    'b',
+    'n',
+    'm',
+    ',',
+    '.',
+    '/',
+];
+const blackKeys = [
+    's',
+    'd',
+    'f',
+    'g',
+    'h',
+    'j',
+    'k',
+    'l',
+    ';',
+];
+const keyMap: { [key: string]: Note } = {};
+let lastNoteWasWhite = false;
+for (const note of noteRange) {
+    if (note.flatName.length === 1) {
+        const key = whiteKeys.shift();
+        if (key === undefined) break;
+        if (lastNoteWasWhite) blackKeys.shift(); // Get rid of unused black key
+        keyMap[key] = note;
+        lastNoteWasWhite = true;
+    } else {
+        const key = blackKeys.shift();
+        if (key === undefined) break;
+        lastNoteWasWhite = false;
+        keyMap[key] = note;
+    }
+}
+useEventListener('keydown', (event) => {
+    const key = event.key.toLowerCase().replace('key', '');
+    if (!keyMap[key]) return;
+    startNote(keyMap[key]);
+});
+useEventListener('keyup', (event) => {
+    const key = event.key.toLowerCase().replace('key', '');
+    if (!keyMap[key]) return;
+    // stopNote(keyMap[key]);
+    stopNote();
+});
 </script>
 
 <template>
@@ -86,6 +142,9 @@ const { pressed: mousePressed } = useMousePressed();
             <div class="key natural"
                 v-for="note in naturals"
                 :key="note.frequency"
+                :style="{
+                    background: note.index === activeNote?.index ? 'red' : undefined,
+                }"
                 @mousedown="startNote(note)"
                 @mouseenter="mousePressed && startNote(note)"
                 @mouseup="stopNote"
@@ -101,6 +160,7 @@ const { pressed: mousePressed } = useMousePressed();
                 :key="note.frequency"
                 :style="{
                     left: getNonNaturalLeft(note) + 'px',
+                    background: note.index === activeNote?.index ? 'red' : undefined,
                 }"
                 @mousedown="startNote(note)"
                 @mouseenter="mousePressed && startNote(note)"
