@@ -1,7 +1,7 @@
 import { createNotePlayer } from "@/utils/notePlayer";
 import { onUnmounted } from "vue";
 
-export function useNotePlayer(maxGain: number = 1) {
+export function useNotePlayer(maxGain = 1) {
     
     const notePlayer = createNotePlayer(maxGain);
 
@@ -11,4 +11,4 @@ export function useNotePlayer(maxGain: number = 1) {
     });
 
     return notePlayer;
-};
+}

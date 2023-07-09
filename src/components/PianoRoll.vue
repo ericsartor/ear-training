@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { notes, type Note } from '@/utils/notes';
-import { ref } from 'vue';
+import { reactive, ref } from 'vue';
 import { useEventListener, useMousePressed } from '@vueuse/core';
 import { useNotePlayer } from '@/composables/useNotePlayer';
 
@@ -68,16 +68,25 @@ function getNonNaturalLeft(nonNatural: Note): number {
 }
 
 // Prepare note player
-const notePlayer = useNotePlayer();
-const activeNote = ref<Note | null>(null);
+const notePlayers: { [noteIndex: number]: ReturnType<typeof useNotePlayer> } = {};
+const activeNotes = reactive<Set<number>>(new Set<number>);
 function startNote(note: Note) {
-    activeNote.value = note;
-    if (props.enableAudio === true) notePlayer.startNote(note);
+    activeNotes.add(note.index);
+    if (props.enableAudio === true) {
+        const notePlayer = notePlayers[note.index] ?? useNotePlayer();
+        notePlayers[note.index] = notePlayer
+        if (!notePlayer) throw Error('no note player for ' + note.index);
+        notePlayer.startNote(note);
+    }
     emit('note', note);
 }
-function stopNote() {
-    activeNote.value = null;
-    if (props.enableAudio === true) notePlayer.stopNote();
+function stopNote(note: Note) {
+    activeNotes.delete(note.index);
+    if (props.enableAudio === true) {
+        const notePlayer = notePlayers[note.index];
+        if (!notePlayer) throw Error('tried to stop a note that wasnt playing');
+        notePlayer.stopNote();
+    }
 }
 
 // Track mouse for use on keys
@@ -131,8 +140,7 @@ useEventListener('keydown', (event) => {
 useEventListener('keyup', (event) => {
     const key = event.key.toLowerCase().replace('key', '');
     if (!keyMap[key]) return;
-    // stopNote(keyMap[key]);
-    stopNote();
+    stopNote(keyMap[key]);
 });
 </script>
 
@@ -143,12 +151,12 @@ useEventListener('keyup', (event) => {
                 v-for="note in naturals"
                 :key="note.frequency"
                 :style="{
-                    background: note.index === activeNote?.index ? 'red' : undefined,
+                    background: activeNotes.has(note.index) ? 'red' : undefined,
                 }"
                 @mousedown="startNote(note)"
                 @mouseenter="mousePressed && startNote(note)"
-                @mouseup="stopNote"
-                @mouseleave="stopNote"
+                @mouseup="stopNote(note)"
+                @mouseleave="stopNote(note)"
             >
                 <span class="name">
                     {{ props.nameType === 'sharp' ? note.sharpName : note.flatName }}
@@ -160,12 +168,12 @@ useEventListener('keyup', (event) => {
                 :key="note.frequency"
                 :style="{
                     left: getNonNaturalLeft(note) + 'px',
-                    background: note.index === activeNote?.index ? 'red' : undefined,
+                    background: activeNotes.has(note.index) ? 'red' : undefined,
                 }"
                 @mousedown="startNote(note)"
                 @mouseenter="mousePressed && startNote(note)"
-                @mouseup="stopNote"
-                @mouseleave="stopNote"
+                @mouseup="stopNote(note)"
+                @mouseleave="stopNote(note)"
             >
                 <span class="name">
                     {{ props.nameType === 'sharp' ? note.sharpName : note.flatName }}
